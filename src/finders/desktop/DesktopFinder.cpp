@@ -175,6 +175,7 @@ void CDesktopFinder::recache() {
     for (const auto& PATH : m_envPaths) {
         cacheDirectory(PATH, PATH);
     }
+
 }
 
 void CDesktopFinder::replantWatch() {
@@ -279,7 +280,9 @@ std::vector<SFinderResult> CDesktopFinder::getResultsForQuery(const std::string&
 
     std::vector<SFinderResult> results;
 
-    auto                       fuzzed = Fuzzy::getNResults(m_desktopEntryCacheGeneric, query, MAX_RESULTS_PER_FINDER);
+    auto                       fuzzyQuery = query;
+    std::ranges::transform(fuzzyQuery, fuzzyQuery.begin(), ::tolower);
+    auto fuzzed = Fuzzy::getNResults(m_desktopEntryCacheGeneric, fuzzyQuery, MAX_RESULTS_PER_FINDER);
 
     results.reserve(fuzzed.size());
 
@@ -292,6 +295,15 @@ std::vector<SFinderResult> CDesktopFinder::getResultsForQuery(const std::string&
             .icon    = *PICONSENABLED ? p->m_icon : "",
             .result  = p,
             .hasIcon = true,
+        });
+    }
+
+    if (query == " ") {
+        std::ranges::sort(results, [](const auto& a, const auto& b) {
+            if (a.result->fuzzable() == b.result->fuzzable())
+                return a.label < b.label;
+
+            return a.result->fuzzable() < b.result->fuzzable();
         });
     }
 
